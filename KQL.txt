@@ -1,0 +1,114 @@
+//***********************************************************************************************************
+// Here are two articles to help you get started with KQL:
+// KQL reference guide - https://aka.ms/KQLguide
+// SQL - KQL conversions - https://aka.ms/sqlcheatsheet
+//***********************************************************************************************************
+
+// Use "take" to view a sample number of records in the table and check the data.
+stocks
+| take 100
+
+// See how many records are in the table.
+stocks
+| count
+
+stocks
+| getschema 
+
+stocks
+| project 'time',symbol,sector,volume
+
+stocks
+| where symbol == "NSFT"
+| take 50
+
+stocks
+| summarize Totalrecords=count() by sector
+| order by Totalrecords desc
+
+//average last sale price by symbol
+stocks
+| summarize AvgLastSalePrice = avg(lastSalePrice) by symbol
+| order by AvgLastSalePrice desc 
+// This query returns the number of ingestions per hour in the given table.
+stocks
+| summarize IngestionCount = count() by bin(ingestion_time(), 1h)
+
+let stock_master = datatable(symbol:string, companyName:string, exchange:string, country:string)
+[
+   "NSFT", "Nosoft Technologies", "NASDAQ", "USA",
+   "BMZM", "BizMart Retail", "NYSE", "USA",
+   "HOOJ", "Hooj Media", "NASDAQ", "USA"
+];
+stock_master
+
+
+
+let stock_master = datatable(symbol:string, companyName:string, exchange:string, country:string)
+[
+   "NSFT", "Nosoft Technologies", "NASDAQ", "USA",
+   "BMZM", "BizMart Retail", "NYSE", "USA",
+   "HOOJ", "Hooj Media", "NASDAQ", "USA"
+];
+stocks
+| take 100
+| join kind=inner stock_master on symbol
+| project Stocktime=['time'], symbol, companyName, exchange, sector, lastSalePrice, volume
+
+let stock_master = datatable(symbol:string, companyName:string, exchange:string, country:string)
+[
+   "NSFT", "Nosoft Technologies", "NASDAQ", "USA",
+   "BMZM", "BizMart Retail", "NYSE", "USA",
+   "HOOJ", "Hooj Media", "NASDAQ", "USA"
+];
+stocks
+| take 100
+| join kind=leftouter  stock_master on symbol
+| project Stocktime=['time'], symbol, companyName, exchange, sector, lastSalePrice, volume
+
+let stock_master = datatable(symbol:string, companyName:string, exchange:string, country:string)
+[
+   "NSFT", "Nosoft Technologies", "NASDAQ", "USA",
+   "BMZM", "BizMart Retail", "NYSE", "USA",
+   "HOOJ", "Hooj Media", "NASDAQ", "USA"
+];
+stocks
+| summarize
+   AvgPrice = avg(lastSalePrice),
+   TotalVolume = sum(volume),
+   RecordCount = count()
+ by symbol
+| join kind=inner stock_master on symbol
+| project symbol, companyName, exchange, AvgPrice, TotalVolume, RecordCount
+| order by TotalVolume desc 
+
+//time Series
+stocks
+| summarize RecordCount = count() by bin(['time'], 1m)
+| order by ['time'] asc
+
+stocks
+| summarize AvgPrice = avg(lastSalePrice) by bin(['time'], 1m)
+| order by ['time'] asc
+
+.create materialized-view Stocks_1Min_Summary on table stocks
+{
+   stocks
+   | summarize
+       AvgPrice = avg(lastSalePrice),
+       TotalVolume = sum(volume),
+       RecordCount = count()
+     by bin(['time'], 1m), symbol
+}
+Stocks_1Min_Summary
+| order by ['time'] desc
+| take 100
+
+Stocks_1Min_Summary
+
+| where symbol == "NSFT"
+
+| order by ['time'] asc
+
+.show materialized-view Stocks_1Min_Summary
+ 
